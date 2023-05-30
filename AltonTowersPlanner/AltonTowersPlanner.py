@@ -65,7 +65,7 @@ def processQueueTimes(queueTimesData):
     totalWaitTime = sum(coasterWaitingTimes[coaster] for coaster in route)
     routeWithTimes = sorted(route, key=lambda coaster: coasterWaitingTimes[coaster])
 
-    return route, routeWithTimes, coasterWaitingTimes, totalWaitTime
+    return route, routeWithTimes, coasterWaitingTimes, totalWaitTime, rollerCoasters
 
 def dijkstra(graph, start, end):
     distances = {node: float('inf') for node in graph}
@@ -96,10 +96,21 @@ def dijkstra(graph, start, end):
     #'distances' dictionary for the current node. This ensures that only the shortest paths
     #are considered.
 
-def printProgramHeader():
-    print("+------------------------------------------+")
-    print("| Alton Towers Roller Coaster Ride Planner |")
-    print("+------------------------------------------+\n")
+
+def chooseStartingCoaster(rollerCoasters):
+    print("Choose a Starting Coaster:\n")
+    coasterList = sorted(list(rollerCoasters))
+    for i, coaster in enumerate(coasterList):
+        print(f"{i + 1}. {coaster}")
+
+    while True:
+        choice = input("\nEnter The Number of The Coaster: ")
+        if choice.isdigit():
+            index = int(choice) - 1
+            if 0 <= index < len(coasterList):
+                return coasterList[index]
+        print("Invalid choice. Please enter a valid number.")
+
 
 def printRoute(route, coasterWaitingTimes, header):
     print(header)
@@ -111,28 +122,51 @@ def printRoute(route, coasterWaitingTimes, header):
     #The enumerate function gets both the index and the name in each iteration. It then displays
     #the index and coaster name in a formatted string.
 
-while True:
-    printProgramHeader()
 
+def printTotalWaitTime(totalWaitTime):
+    totalWaitHours = totalWaitTime // 60
+    totalWaitMinutes = totalWaitTime % 60
+    totalWaitFormatted = (f"{totalWaitTime} minutes ({totalWaitHours} hour(s) {totalWaitMinutes} minutes)")
+    print(f"\nTotal waiting Time: {totalWaitFormatted}")
+
+    #It formats the total wait time in hours and minutes. The hours are calculated using integer division (//)
+    #and the minutes are calculated using modular division (%) by 60, so it returns the respective time in a
+    #more readable format. Then the function prints the waiting time.
+
+
+print("+------------------------------------------+")
+print("| Alton Towers Roller Coaster Ride Planner |")
+print("+------------------------------------------+\n")
+
+print("Powered by Queue-Times.com (https://queue-times.com)\n")
+print("Please note that Nemesis is temporarily closed and will reopen in 2024")
+print("______________________________________________________________________\n")
+
+
+while True:
     currentTime = datetime.now().strftime("%A %d %B %Y %I:%M%p")
     print(f"Current Time: {currentTime}\n")
 
     queueTimesData = fetchQueueTimes()
 
-    print("Please note that Nemesis is temporarily closed and will reopen in 2024")
-    print("____________________________________________\n")
+    route, routeWithTimes, coasterWaitingTimes, totalWaitTime, rollerCoasters = processQueueTimes(queueTimesData)
 
-    route, routeWithTimes, coasterWaitingTimes, totalWaitTime = processQueueTimes(queueTimesData)
+    startingCoaster = chooseStartingCoaster(rollerCoasters)
+    print(f"\nStarting Coaster: {startingCoaster}")
 
-    printRoute(route, coasterWaitingTimes, "Optimal Route Based on Dijkstra's Algorithm:\n")
+    route.remove(startingCoaster)
+    route.insert(0, startingCoaster)
+
+    print("____________________________________________")
+    printRoute(route, coasterWaitingTimes, "\nOptimal Route Based on Dijkstra's Algorithm:\n")
     print("____________________________________________\n")
     
     printRoute(routeWithTimes, coasterWaitingTimes, "Route In Ascending Order of Waiting Times:\n")
     print("____________________________________________\n")
     
-    print(f"\nTotal Waiting Time: {totalWaitTime} minutes")
-    print("\nPowered by Queue-Times.com (https://queue-times.com)")
+    printTotalWaitTime(totalWaitTime)
+    #print("\nPowered by Queue-Times.com (https://queue-times.com)")
 
-    userInput = input("\nPress any key to refresh or 'q' to quit: ")
+    userInput = input("\nPress any key to refresh or 'q' to quit: \n")
     if userInput.lower() == 'q':
         break
