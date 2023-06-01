@@ -7,7 +7,7 @@ from datetime import datetime
 #Alton Towers. It uses Dijkstra's algorithm to visit every location once and
 #return the shortest path based on the current wait times of the rides.
 
-ExcludedRides = {'Enterprise', 'Funk’n’Fly', 'Spinjam', 'Twistatron', 'Nemesis'}
+ExcludedRides = {'Enterprise', 'Funk’n’Fly', 'Spinjam', 'Twistatron'}
 #List of excluded rides as some are either no roller coasters or closed.
 
 def fetchQueueTimes():
@@ -22,11 +22,13 @@ def fetchQueueTimes():
 
     #Fetches the queue times from the API.
 
+
 def processQueueTimes(queueTimesData):
     lands = queueTimesData["lands"]
 
     rollerCoasters = set()
     coasterWaitingTimes = {}
+    coasterStatus = {}
     graph = {}
 
     for land in lands:
@@ -37,6 +39,7 @@ def processQueueTimes(queueTimesData):
                 if rideName not in ExcludedRides:
                     rollerCoasters.add(rideName)
                     coasterWaitingTimes[rideName] = ride["wait_time"]
+                    coasterStatus[rideName] = ride["is_open"]
                     graph[rideName] = [(adjRide["name"], adjRide["wait_time"]) for adjRide in rides
                                        if adjRide["name"] != rideName and adjRide["name"] in rollerCoasters]
 
@@ -65,7 +68,7 @@ def processQueueTimes(queueTimesData):
     totalWaitTime = sum(coasterWaitingTimes[coaster] for coaster in route)
     routeWithTimes = sorted(route, key=lambda coaster: coasterWaitingTimes[coaster])
 
-    return route, routeWithTimes, coasterWaitingTimes, totalWaitTime, rollerCoasters
+    return route, routeWithTimes, coasterWaitingTimes, coasterStatus, totalWaitTime, rollerCoasters
 
 def dijkstra(graph, start, end):
     distances = {node: float('inf') for node in graph}
@@ -112,11 +115,13 @@ def chooseStartingCoaster(rollerCoasters):
         print("Invalid choice. Please enter a valid number.")
 
 
-def printRoute(route, coasterWaitingTimes, header):
+def printRoute(route, coasterWaitingTimes, coasterStatus, header):
     print(header)
     for i, coaster in enumerate(route):
         waitTime = coasterWaitingTimes[coaster]
-        print(f"{i + 1}. {coaster.ljust(16)} - Queue Time: {str(waitTime).ljust(2)} minutes")
+        status = coasterStatus[coaster]
+        statusText = "Open" if status else "Closed"
+        print(f"{i + 1}. {coaster.ljust(16)} - Queue Time: {str(waitTime).ljust(2)} minutes ({statusText})")
 
     #The loop iterates over the 'route' list, which contains the optimal order of roller coasters.
     #The enumerate function gets both the index and the name in each iteration. It then displays
@@ -139,6 +144,7 @@ print("| Alton Towers Roller Coaster Ride Planner |")
 print("+------------------------------------------+\n")
 
 print("Powered by Queue-Times.com (https://queue-times.com)\n")
+print("Queue times are updated every 5 minutes and are subject to change\n")
 print("Please note that Nemesis is temporarily closed and will reopen in 2024")
 print("______________________________________________________________________\n")
 
@@ -149,7 +155,7 @@ while True:
 
     queueTimesData = fetchQueueTimes()
 
-    route, routeWithTimes, coasterWaitingTimes, totalWaitTime, rollerCoasters = processQueueTimes(queueTimesData)
+    route, routeWithTimes, coasterWaitingTimes, coasterStatus, totalWaitTime, rollerCoasters = processQueueTimes(queueTimesData)
 
     startingCoaster = chooseStartingCoaster(rollerCoasters)
     print(f"\nStarting Coaster: {startingCoaster}")
@@ -157,15 +163,14 @@ while True:
     route.remove(startingCoaster)
     route.insert(0, startingCoaster)
 
-    print("____________________________________________")
-    printRoute(route, coasterWaitingTimes, "\nOptimal Route Based on Dijkstra's Algorithm:\n")
-    print("____________________________________________\n")
+    print("_____________________________________________________")
+    printRoute(route, coasterWaitingTimes, coasterStatus, "\nOptimal Route Based on Dijkstra's Algorithm:\n")
+    print("_____________________________________________________\n")
     
-    printRoute(routeWithTimes, coasterWaitingTimes, "Route In Ascending Order of Waiting Times:\n")
-    print("____________________________________________\n")
+    printRoute(routeWithTimes, coasterWaitingTimes, coasterStatus, "Route In Ascending Order of Waiting Times:\n")
+    print("_____________________________________________________\n")
     
     printTotalWaitTime(totalWaitTime)
-    #print("\nPowered by Queue-Times.com (https://queue-times.com)")
 
     userInput = input("\nPress any key to refresh or 'q' to quit: \n")
     if userInput.lower() == 'q':
